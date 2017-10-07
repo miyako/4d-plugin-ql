@@ -38,3 +38,18 @@ type|ARRAY TEXT|
 data|ARRAY BLOB|
 options|TEXT|JSON in/out
 preview|BLOB|
+
+Possible properties of options on output:
+
+```
+height
+PDFStyle
+baseBundlePath (converted to HFS)
+textEncoding
+pageElementXPath
+mimeType
+width
+allowJavascript
+```
+
+No known generators seem to process ``options`` on input.
