@@ -1,5 +1,5 @@
 # 4d-plugin-ql
-Use QuickLook API to generate thumbnails and previews
+Use [QuickLook](https://developer.apple.com/documentation/quicklook) API to generate thumbnails and previews.
 
 ### Platform
 
