@@ -39,7 +39,7 @@ data|ARRAY BLOB|
 options|TEXT|JSON in/out
 preview|BLOB|
 
-Possible properties of options on output:
+Possible properties of ``options`` on output:
 
 ```
 height
