@@ -202,6 +202,12 @@ void setOptions(PA_Unistring *str, CFDictionaryRef options)
 void QL_Create_thumbnail(sLONG_PTR *pResult, PackagePtr pParams)
 {
 	CFURLRef url = copyPathURL((PA_Unistring *)pParams[0]);
+
+#if CGFLOAT_IS_DOUBLE
+#define NUMBER_TYPE kCFNumberDoubleType
+#else
+#define NUMBER_TYPE kCFNumberFloatType
+#endif
 	
 	if(url)
 	{
@@ -213,14 +219,15 @@ void QL_Create_thumbnail(sLONG_PTR *pResult, PackagePtr pParams)
 			if(CFDictionaryGetValueIfPresent(options, CFSTR("width"), (const void **)&doubleValue))
 			{
 				CGFloat w;
-				if(CFNumberGetValue(doubleValue, kCFNumberDoubleType, &w))
+				if(CFNumberGetValue(doubleValue, NUMBER_TYPE, &w))
 				{
 					maxSize.width = w;
-				}			}
+				}
+			}
 			if(CFDictionaryGetValueIfPresent(options, CFSTR("height"), (const void **)&doubleValue))
 			{
 				CGFloat h;
-				if(CFNumberGetValue(doubleValue, kCFNumberDoubleType, &h))
+				if(CFNumberGetValue(doubleValue, NUMBER_TYPE, &h))
 				{
 					maxSize.height = h;
 				}
