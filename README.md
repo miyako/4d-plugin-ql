@@ -11,9 +11,29 @@ Use [QuickLook](https://developer.apple.com/documentation/quicklook) API to gene
 
 <img src="https://user-images.githubusercontent.com/1725068/41266195-ddf767b2-6e30-11e8-9d6b-2adf6a9f57a5.png" width="32" height="32" />
 
----
+### Remarks
 
-## Syntax
+to dump "c" symbols from ``qlmanage``
+
+```
+nm -g /usr/bin/qlmanage
+```
+
+to dump "obj-c" symbols from ``qlmanage``
+
+```
+otool -ov /usr/bin/qlmanage
+```
+
+or use [class-dump](https://github.com/nygard/class-dump)
+
+previous version was using a hidden function ``QLPreviewCopyData`` to generate preview.
+
+this API has been removed (at least, on Catalina).
+
+current version is using ``- synchronousGetData`` of the hidden ``QLPreview`` class.
+
+### Syntax
 
 ```
 thumbnail:=QL Create thumbnail (path;options)
