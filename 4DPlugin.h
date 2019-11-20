@@ -20,44 +20,76 @@
  */
 
 typedef struct __QLPreview *QLPreviewRef;
-QL_PRIVATE_EXPORT CFTypeID QLPreviewGetTypeID();
 
-//create
+@protocol QLDataGenerationHandler
+- (void)startAttachment:(NSURL *)arg1 withMimeType:(NSString *)arg2 encoding:(NSString *)arg3;
+- (void)receivedDataFromServer:(NSData *)arg1 attachmentURL:(NSURL *)arg2 hasMoreData:(BOOL)arg3;
+@end
+
+@protocol QLDaemonProxyProtocol
+- (void)requestDataForPreview:(NSUUID *)arg1 dataHandler:(id <QLDataGenerationHandler>)arg2;
+@end
+
+@interface QLDaemonProxy : NSObject
+{
+    NSXPCConnection *_connection;
+    NSObject<QLDaemonProxyProtocol> *_proxy;
+}
+
++ (id)interface;
++ (id)sharedInstance;
+//- (void).cxx_destruct;
+- (id)forwardingTargetForSelector:(SEL)arg1;
+- (void)dealloc;
+- (id)init;
+
+@end
+
+typedef void (^CDUnknownBlockType)(void); // return type and parameters are unknown
+
+@interface QLPreviewProgressiveCallbacks : NSObject
+{
+    CDUnknownBlockType _startDataRepresentation;
+    CDUnknownBlockType _startAttachment;
+    CDUnknownBlockType _appendData;
+    CDUnknownBlockType _createSafeAttachmentURL;
+}
+
+@property(copy, nonatomic) CDUnknownBlockType createSafeAttachmentURL; // @synthesize createSafeAttachmentURL=_createSafeAttachmentURL;
+@property(copy, nonatomic) CDUnknownBlockType appendData; // @synthesize appendData=_appendData;
+@property(copy, nonatomic) CDUnknownBlockType startAttachment; // @synthesize startAttachment=_startAttachment;
+@property(copy, nonatomic) CDUnknownBlockType startDataRepresentation; // @synthesize startDataRepresentation=_startDataRepresentation;
+//- (void).cxx_destruct;
+
+@end
+
+@interface QLPreview : NSObject <NSSecureCoding, QLDataGenerationHandler>
+{
+    struct __QLPreview *_previewRef;
+    QLDaemonProxy *_daemonProxy;
+    NSUUID *_uuid;
+    NSMutableArray *_waitForDataCompletionBlocks;
+    NSDictionary *_waitForDataOptions;
+    BOOL _progressive;
+    QLPreviewProgressiveCallbacks *_progressiveCallbacks;
+}
+
+- (id)synchronousGetData;
+- (id)initWithQLPreviewRef:(struct __QLPreview *)arg1;
+
+@property struct __QLPreview *previewRef;
+
+@end
+
 QL_PRIVATE_EXPORT QLPreviewRef QLPreviewCreate(CFAllocatorRef, CFURLRef, CFDictionaryRef);
-QL_PRIVATE_EXPORT void QLPreviewCancel(QLPreviewRef);
 QL_PRIVATE_EXPORT void QLPreviewClose(QLPreviewRef);
-
-//copy
-QL_PRIVATE_EXPORT CFDataRef QLPreviewCopyData(QLPreviewRef);
-QL_PRIVATE_EXPORT CFURLRef QLPreviewCopyDocumentURL(QLPreviewRef);
 QL_PRIVATE_EXPORT CFDictionaryRef QLPreviewCopyProperties(QLPreviewRef);
-QL_PRIVATE_EXPORT CFDictionaryRef QLPreviewCopyOptions(QLPreviewRef);
 QL_PRIVATE_EXPORT CFStringRef QLPreviewCopyPreviewContentType(QLPreviewRef);
-
-//copy (usage unknown)
-QL_PRIVATE_EXPORT CGImageRef QLPreviewCopyBitmapImage(QLPreviewRef);
-QL_PRIVATE_EXPORT CFURLRef QLPreviewCopyURLRepresentation(QLPreviewRef);
-QL_PRIVATE_EXPORT CFDataRef QLPreviewCopyNextData(QLPreviewRef);
-
-//get
 QL_PRIVATE_EXPORT CFStringRef QLPreviewGetDisplayBundleID(QLPreviewRef);
-QL_PRIVATE_EXPORT CGSize QLPreviewGetPreviewSizeHint(QLPreviewRef);
-QL_PRIVATE_EXPORT CFArrayRef QLPreviewGetInlinePreviewSupportedContentTypes(QLPreviewRef);
 QL_PRIVATE_EXPORT CFStringRef QLPreviewTypeGetRawImageDisplayBundleID();
 QL_PRIVATE_EXPORT CFStringRef QLPreviewTypeGetRawImageContentType();
-/*
- _QLPreviewGetPreviewType (deprecated..?)
- _QLPreviewGetRepresentedObject
- */
-
-//set
-QL_PRIVATE_EXPORT void QLPreviewSetForceContentTypeUTI(QLPreviewRef, CFStringRef);
-QL_PRIVATE_EXPORT void QLPreviewSetDisplayBundleID(QLPreviewRef, CFStringRef);
-
-//misc
-QL_PRIVATE_EXPORT CFStringRef QLPreviewTypeGetDisplayBundleIDForUTI(CFStringRef);
 QL_PRIVATE_EXPORT CFIndex QLPreviewTypeGetDisplayBundleCount();
 
 // --- QL
-void QL_Create_thumbnail(sLONG_PTR *pResult, PackagePtr pParams);
-void QL_Create_preview(sLONG_PTR *pResult, PackagePtr pParams);
+void QL_Create_thumbnail(PA_PluginParameters params);
+void QL_Create_preview(PA_PluginParameters params);

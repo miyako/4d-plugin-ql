@@ -11,36 +11,27 @@
 #include "4DPluginAPI.h"
 #include "4DPlugin.h"
 
-void PluginMain(PA_long32 selector, PA_PluginParameters params)
-{
-	PA_long32 pProcNum = selector;
-	sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
-	PackagePtr pParams = (PackagePtr)params->fParameters;
-	
-	CommandDispatcher(pProcNum, pResult, pParams);
-}
+void PluginMain(PA_long32 selector, PA_PluginParameters params) {
+    
+        switch(selector)
+        {
+    // --- QL
 
-void CommandDispatcher (PA_long32 pProcNum, sLONG_PTR *pResult, PackagePtr pParams)
-{
-	switch(pProcNum)
-	{
-// --- QL
+            case 1 :
+                QL_Create_thumbnail(params);
+                break;
 
-		case 1 :
-			QL_Create_thumbnail(pResult, pParams);
-			break;
+            case 2 :
+                QL_Create_preview(params);
+                break;
 
-		case 2 :
-			QL_Create_preview(pResult, pParams);
-			break;
-
-	}
+        }
 }
 
 #pragma mark -
 
-CFURLRef copyPathURL(PA_Unistring *str)
-{
+CFURLRef copyPathURL(PA_Unistring *str) {
+    
 	if(str)
 	{
 		CFStringRef path = CFStringCreateWithCharacters(kCFAllocatorDefault, (const UniChar *)str->fString, (CFIndex)str->fLength);
@@ -53,8 +44,8 @@ CFURLRef copyPathURL(PA_Unistring *str)
 	return nil;
 }
 
-CFStringRef createFromWideChar(json_char *wstr)
-{
+CFStringRef createFromWideChar(json_char *wstr) {
+    
 	if(wstr)
 	{
 		size_t len = wcslen(wstr) * sizeof(wchar_t);
@@ -78,8 +69,8 @@ CFStringRef createFromWideChar(json_char *wstr)
 	return nil;
 }
 
-CFDictionaryRef copyOptions(PA_Unistring *str)
-{
+CFDictionaryRef copyOptions(PA_Unistring *str) {
+    
 	CFMutableDictionaryRef options = CFDictionaryCreateMutable(kCFAllocatorDefault,
 																														 0,
 																														 &kCFTypeDictionaryKeyCallBacks,
@@ -161,8 +152,8 @@ CFDictionaryRef copyOptions(PA_Unistring *str)
 	return options;
 }
 
-void setOptions(PA_Unistring *str, CFDictionaryRef options)
-{
+void setOptions(PA_Unistring *str, CFDictionaryRef options) {
+    
 	if(str)
 	{
 		NSError *error;
@@ -198,20 +189,19 @@ void setOptions(PA_Unistring *str, CFDictionaryRef options)
 
 // -------------------------------------- QL --------------------------------------
 
-
-void QL_Create_thumbnail(sLONG_PTR *pResult, PackagePtr pParams)
-{
-	CFURLRef url = copyPathURL((PA_Unistring *)pParams[0]);
-
 #if CGFLOAT_IS_DOUBLE
 #define NUMBER_TYPE kCFNumberDoubleType
 #else
 #define NUMBER_TYPE kCFNumberFloatType
 #endif
-	
+
+void QL_Create_thumbnail(PA_PluginParameters params) {
+        
+	CFURLRef url = copyPathURL(PA_GetStringParameter(params, 1));
+
 	if(url)
 	{
-		CFDictionaryRef options = copyOptions((PA_Unistring *)pParams[1]);
+		CFDictionaryRef options = copyOptions(PA_GetStringParameter(params, 2));
 		if(options)
 		{			
 			CGSize maxSize = CGSizeMake(1024, 1024);
@@ -224,7 +214,8 @@ void QL_Create_thumbnail(sLONG_PTR *pResult, PackagePtr pParams)
 					maxSize.width = w;
 				}
 			}
-			if(CFDictionaryGetValueIfPresent(options, CFSTR("height"), (const void **)&doubleValue))
+			
+            if(CFDictionaryGetValueIfPresent(options, CFSTR("height"), (const void **)&doubleValue))
 			{
 				CGFloat h;
 				if(CFNumberGetValue(doubleValue, NUMBER_TYPE, &h))
@@ -244,10 +235,9 @@ void QL_Create_thumbnail(sLONG_PTR *pResult, PackagePtr pParams)
 				CGImageDestinationAddImage(destination, image, properties);
 				CGImageDestinationFinalize(destination);
 
-				//$0<-
-				PA_Picture picture = PA_CreatePicture((void *)CFDataGetBytePtr(data), (PA_long32)CFDataGetLength(data));
-				*(PA_Picture*) pResult = picture;
-
+                PA_ReturnPicture(params,
+                                 PA_CreatePicture((void *)CFDataGetBytePtr(data), (PA_long32)CFDataGetLength(data)));
+                
 				CFRelease(properties);
 				CFRelease(destination);
 				CFRelease(data);
@@ -262,9 +252,8 @@ void QL_Create_thumbnail(sLONG_PTR *pResult, PackagePtr pParams)
 					//will be 1024x1024
 					[image setSize:NSMakeSize(maxSize.width, maxSize.height)];
 					NSData *data = [image TIFFRepresentation];
-					//$0<-
-					PA_Picture picture = PA_CreatePicture((void *)[data bytes], (PA_long32)[data length]);
-					*(PA_Picture*) pResult = picture;
+                    
+                    PA_ReturnPicture(params, PA_CreatePicture((void *)[data bytes], (PA_long32)[data length]));
 					[path release];
 				}
 		
@@ -276,13 +265,13 @@ void QL_Create_thumbnail(sLONG_PTR *pResult, PackagePtr pParams)
 	}
 }
 
-void QL_Create_preview(sLONG_PTR *pResult, PackagePtr pParams)
-{
-	PA_Variable param2 = (*(PA_Variable *)pParams[1]);
+void QL_Create_preview(PA_PluginParameters params) {
+    
+	PA_Variable param2 = PA_GetVariableParameter(params, 2);
 	PA_ResizeArray(&param2, 0);
 	PA_SetArrayCurrent(&param2, 0);
 	
-	PA_Variable param3 = (*(PA_Variable *)pParams[2]);
+	PA_Variable param3 = PA_GetVariableParameter(params, 3);
 	PA_ResizeArray(&param3, 0);
 	PA_SetArrayCurrent(&param3, 0);
 	
@@ -291,23 +280,32 @@ void QL_Create_preview(sLONG_PTR *pResult, PackagePtr pParams)
 																																	 &kCFTypeDictionaryValueCallBacks);
 	if(returnOptions)
 	{
-		CFURLRef url = copyPathURL((PA_Unistring *)pParams[0]);
+		CFURLRef url = copyPathURL(PA_GetStringParameter(params, 1));
 		
 		if(url)
 		{
-			CFDictionaryRef options = copyOptions((PA_Unistring *)pParams[3]);
+			CFDictionaryRef options = copyOptions(PA_GetStringParameter(params, 4));
 			if(options)
 			{
 				QLPreviewRef preview = QLPreviewCreate(kCFAllocatorDefault, url, options);
 				if(preview)
 				{
-					CFDataRef data = QLPreviewCopyData(preview);//this is where the preview is actually created
+                    
+                    //this is where the preview is actually created
+                    /*
+                        CFDataRef data = QLPreviewCopyData(preview);
+                     */
+                    
+                    QLPreview *qlpreview = [[QLPreview alloc] initWithQLPreviewRef:preview];
+
+                    NSData *data = [qlpreview synchronousGetData];
+
 					if(data)
 					{
 						//properties
 						CFDictionaryRef properties = QLPreviewCopyProperties(preview);
-						[(NSDictionary *)properties enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop)
-						 {
+						[(NSDictionary *)properties enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+                            
 							 if([(NSString *)key isEqualToString:@"Height"])
 							 {
 								 CFDictionarySetValue(returnOptions, CFSTR("height"), obj); return;
@@ -351,7 +349,7 @@ void QL_Create_preview(sLONG_PTR *pResult, PackagePtr pParams)
 						//properties.attachments
 						if(CFDictionaryContainsKey(properties, kQLPreviewPropertyAttachmentsKey))
 						{
-							CFDictionaryRef attachments = CFDictionaryGetValue(properties, kQLPreviewPropertyAttachmentsKey);
+							CFDictionaryRef attachments = (CFDictionaryRef)CFDictionaryGetValue(properties, kQLPreviewPropertyAttachmentsKey);
 							NSUInteger count = [(NSDictionary *)attachments count];
 							PA_ResizeArray(&param2, (PA_long32)count);
 							PA_ResizeArray(&param3, (PA_long32)count);
@@ -372,9 +370,9 @@ void QL_Create_preview(sLONG_PTR *pResult, PackagePtr pParams)
 								 }
 								 //->$3
 								 CFDictionaryRef attachment = (CFDictionaryRef)obj;
-								 NSData *data = (NSData *)CFDictionaryGetValue(attachment, kQLPreviewPropertyAttachmentDataKey);
+								 NSData *_data = (NSData *)CFDictionaryGetValue(attachment, kQLPreviewPropertyAttachmentDataKey);
 								 PA_Variable element = PA_CreateVariable(eVK_Blob);
-								 PA_SetBlobVariable(&element, (void *)[data bytes], (PA_long32)[data length]);
+								 PA_SetBlobVariable(&element, (void *)[_data bytes], (PA_long32)[_data length]);
 								 PA_SetBlobInArray(param3, (PA_long32)nb, element.uValue.fBlob);
 								 
 								 nb++;
@@ -382,23 +380,20 @@ void QL_Create_preview(sLONG_PTR *pResult, PackagePtr pParams)
 							 }];
 						}
 						CFRelease(properties);
-						
-						//$0<-
-						PA_Handle *h = (PA_Handle *)pResult;
-						PA_Handle d = PA_NewHandle((PA_long32)CFDataGetLength(data));
-						PA_MoveBlock((char *)CFDataGetBytePtr(data), PA_LockHandle(d), (PA_long32)CFDataGetLength(data));
-						PA_UnlockHandle(d);
-						*h = d;
-		
-						CFRelease(data);
+
+                        PA_ReturnBlob(params, (void *)[data bytes], (PA_long32)[data length]);
+  
 					}//data
 
+                    [qlpreview release];
+                    
 					//->$4
 					CFDictionarySetValue(returnOptions, CFSTR("displayBundleID"), QLPreviewGetDisplayBundleID(preview));
 					CFStringRef previewContentType = QLPreviewCopyPreviewContentType(preview);
-					CFDictionarySetValue(returnOptions, CFSTR("previewContentType"), previewContentType);
-					CFRelease(previewContentType);
-					
+                    if(previewContentType) {
+                        CFDictionarySetValue(returnOptions, CFSTR("previewContentType"), previewContentType);
+                        CFRelease(previewContentType);
+                    }
 					//can't convert array/dict to serialised json...
 					/*
 					 CFArrayRef inlinePreviewSupportedContentTypes = QLPreviewGetInlinePreviewSupportedContentTypes(preview);
@@ -413,18 +408,10 @@ void QL_Create_preview(sLONG_PTR *pResult, PackagePtr pParams)
 		}//url
 		
 		//->$2
-		PA_Variable *pParam2 = ((PA_Variable *)pParams[1]);
-		pParam2->fFiller = 0;
-		pParam2->uValue.fArray.fCurrent = param2.uValue.fArray.fCurrent;
-		pParam2->uValue.fArray.fNbElements = param2.uValue.fArray.fNbElements;
-		pParam2->uValue.fArray.fData = param2.uValue.fArray.fData;
-
+        PA_SetVariableParameter(params, 2, param2, 0);
+        
 		//->$3
-		PA_Variable *pParam3 = ((PA_Variable *)pParams[2]);
-		pParam3->fFiller = 0;
-		pParam3->uValue.fArray.fCurrent = param3.uValue.fArray.fCurrent;
-		pParam3->uValue.fArray.fNbElements = param3.uValue.fArray.fNbElements;
-		pParam3->uValue.fArray.fData = param3.uValue.fArray.fData;
+        PA_SetVariableParameter(params, 3, param3, 0);
 		
 		//->$4
 		CFDictionarySetValue(returnOptions, CFSTR("rawImageDisplayBundleID"), QLPreviewTypeGetRawImageDisplayBundleID());
@@ -434,8 +421,9 @@ void QL_Create_preview(sLONG_PTR *pResult, PackagePtr pParams)
 		CFDictionarySetValue(returnOptions, CFSTR("displayBundleCount"), intValue);
 		CFRelease(intValue);
 		
-		setOptions((PA_Unistring *)pParams[3], returnOptions);
+        PA_Unistring *param4 = PA_GetStringParameter(params, 4);
+        
+		setOptions(param4, returnOptions);
 		CFRelease(returnOptions);
 	}
 }
-
