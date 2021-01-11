@@ -17,6 +17,8 @@ Use [QuickLook](https://developer.apple.com/documentation/quicklook) API to gene
 
 ```
 Symbol not found: _QLPreviewClose
+Symbol not found: _QLPreviewCopyPreviewContentType
+Symbol not found: _QLPreviewCopyProperties
 ```
 
 ### Remarks
