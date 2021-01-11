@@ -6,6 +6,8 @@ Use [QuickLook](https://developer.apple.com/documentation/quicklook) API to gene
 
 ### Remarks
 
+Works on Catalina only!
+
 to dump "c" symbols from ``qlmanage``
 
 ```
