@@ -26,7 +26,7 @@ or use [class-dump](https://github.com/nygard/class-dump)
 
 previous version was using a hidden function ``QLPreviewCopyData`` to generate preview.
 
-this API has been removed (at least, on Catalina).
+this API has been removed on Catalina and Big Sur.
 
 current version is using ``- synchronousGetData`` of the hidden ``QLPreview`` class.
 
