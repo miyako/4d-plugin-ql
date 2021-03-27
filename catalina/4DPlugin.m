@@ -267,30 +267,163 @@ void QL_Create_thumbnail(PA_PluginParameters params) {
 
 void QL_Create_preview(PA_PluginParameters params) {
     
-    CFURLRef url = copyPathURL(PA_GetStringParameter(params, 1));
-    
-    if(url)
-    {
-        CFDictionaryRef options = copyOptions(PA_GetStringParameter(params, 4));
-        if(options)
-        {
-            
-            QLPreview *qlpreview = [[QLPreview alloc] initWithURL:(NSURL *)url options:(NSDictionary *)options];
-            //                    QLPreview *qlpreview = [[QLPreview alloc] initWithQLPreviewRef:preview];
-            
-            NSData *data = [qlpreview synchronousGetData];
-            
-            if(data)
-            {
-                PA_ReturnBlob(params, (void *)[data bytes], (PA_long32)[data length]);
-                
-            }//data
-            
-            [qlpreview release];
-            
-            CFRelease(options);
-        }//options
-        CFRelease(url);
-    }//url
-    
+	PA_Variable param2 = PA_GetVariableParameter(params, 2);
+	PA_ResizeArray(&param2, 0);
+	PA_SetArrayCurrent(&param2, 0);
+	
+	PA_Variable param3 = PA_GetVariableParameter(params, 3);
+	PA_ResizeArray(&param3, 0);
+	PA_SetArrayCurrent(&param3, 0);
+	
+	CFMutableDictionaryRef returnOptions = CFDictionaryCreateMutable(kCFAllocatorDefault, 0,
+																																	 &kCFTypeDictionaryKeyCallBacks,
+																																	 &kCFTypeDictionaryValueCallBacks);
+	if(returnOptions)
+	{
+		CFURLRef url = copyPathURL(PA_GetStringParameter(params, 1));
+		
+		if(url)
+		{
+			CFDictionaryRef options = copyOptions(PA_GetStringParameter(params, 4));
+			if(options)
+			{
+				QLPreviewRef preview = QLPreviewCreate(kCFAllocatorDefault, url, options);
+				if(preview)
+				{
+                    
+                    //this is where the preview is actually created
+                    /*
+                        CFDataRef data = QLPreviewCopyData(preview);
+                     */
+                    
+                    QLPreview *qlpreview = [[QLPreview alloc] initWithQLPreviewRef:preview];
+
+                    NSData *data = [qlpreview synchronousGetData];
+
+					if(data)
+					{
+						//properties
+						CFDictionaryRef properties = QLPreviewCopyProperties(preview);
+						[(NSDictionary *)properties enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+                            
+							 if([(NSString *)key isEqualToString:@"Height"])
+							 {
+								 CFDictionarySetValue(returnOptions, CFSTR("height"), obj); return;
+							 }else if([(NSString *)key isEqualToString:@"PDFStyle"])
+							 {
+								 CFDictionarySetValue(returnOptions, CFSTR("PDFStyle"), obj); return;
+							 }else if([(NSString *)key isEqualToString:@"BaseBundlePath"])
+							 {
+								 //convert to hfs
+								 CFURLRef u = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, (CFStringRef)obj, kCFURLPOSIXPathStyle, false);
+								 if(u)
+								 {
+									 CFStringRef s = CFURLCopyFileSystemPath((CFURLRef)u, kCFURLHFSPathStyle);
+									 if(s)
+									 {
+										 CFDictionarySetValue(returnOptions, CFSTR("baseBundlePath"), s);
+										 CFRelease(s);
+									 }
+									 CFRelease(u);
+								 }
+								  return;
+							 }else if([(NSString *)key isEqualToString:@"TextEncoding"])
+							 {
+								 CFDictionarySetValue(returnOptions, CFSTR("textEncoding"), obj); return;
+							 }else if([(NSString *)key isEqualToString:@"PageElementXPath"])
+							 {
+								 CFDictionarySetValue(returnOptions, CFSTR("pageElementXPath"), obj); return;
+							 }else if([(NSString *)key isEqualToString:@"MimeType"])
+							 {
+								 CFDictionarySetValue(returnOptions, CFSTR("mimeType"), obj); return;
+							 }else if([(NSString *)key isEqualToString:@"Width"])
+							 {
+								 CFDictionarySetValue(returnOptions, CFSTR("width"), obj); return;
+							 }else if([(NSString *)key isEqualToString:@"AllowJavascript"])
+							 {
+								 CFDictionarySetValue(returnOptions, CFSTR("allowJavascript"), obj); return;
+							 }
+	 
+						 }];
+						
+						//properties.attachments
+						if(CFDictionaryContainsKey(properties, kQLPreviewPropertyAttachmentsKey))
+						{
+							CFDictionaryRef attachments = (CFDictionaryRef)CFDictionaryGetValue(properties, kQLPreviewPropertyAttachmentsKey);
+							NSUInteger count = [(NSDictionary *)attachments count];
+							PA_ResizeArray(&param2, (PA_long32)count);
+							PA_ResizeArray(&param3, (PA_long32)count);
+							__block NSUInteger nb = 1;
+							[(NSDictionary *)attachments enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop)
+							 {
+								 //->$2
+								 CFStringRef cid = (CFStringRef)key;
+								 uint32_t dataSize = (uint32_t)((CFStringGetLength(cid) * sizeof(UniChar))+sizeof(UniChar));
+								 void *buf = malloc(dataSize);
+								 if(buf)
+								 {
+									 memset(buf, 0, dataSize);
+									 CFStringGetCharacters(cid, CFRangeMake(0, CFStringGetLength(cid)), (UniChar *)buf);
+									 PA_Unistring str = PA_CreateUnistring((PA_Unichar *)buf);
+									 PA_SetStringInArray(param2, (PA_long32)nb, &str);
+									 free(buf);
+								 }
+								 //->$3
+								 CFDictionaryRef attachment = (CFDictionaryRef)obj;
+								 NSData *_data = (NSData *)CFDictionaryGetValue(attachment, kQLPreviewPropertyAttachmentDataKey);
+								 PA_Variable element = PA_CreateVariable(eVK_Blob);
+								 PA_SetBlobVariable(&element, (void *)[_data bytes], (PA_long32)[_data length]);
+								 PA_SetBlobInArray(param3, (PA_long32)nb, element.uValue.fBlob);
+								 
+								 nb++;
+ 
+							 }];
+						}
+						CFRelease(properties);
+
+                        PA_ReturnBlob(params, (void *)[data bytes], (PA_long32)[data length]);
+  
+					}//data
+
+                    [qlpreview release];
+                    
+					//->$4
+					CFDictionarySetValue(returnOptions, CFSTR("displayBundleID"), QLPreviewGetDisplayBundleID(preview));
+					CFStringRef previewContentType = QLPreviewCopyPreviewContentType(preview);
+                    if(previewContentType) {
+                        CFDictionarySetValue(returnOptions, CFSTR("previewContentType"), previewContentType);
+                        CFRelease(previewContentType);
+                    }
+					//can't convert array/dict to serialised json...
+					/*
+					 CFArrayRef inlinePreviewSupportedContentTypes = QLPreviewGetInlinePreviewSupportedContentTypes(preview);
+					 CGSize sizeHint = QLPreviewGetPreviewSizeHint(preview);
+					 */
+
+					QLPreviewClose(preview);
+				}//preview
+				CFRelease(options);
+			}//options
+			CFRelease(url);
+		}//url
+		
+		//->$2
+        PA_SetVariableParameter(params, 2, param2, 0);
+        
+		//->$3
+        PA_SetVariableParameter(params, 3, param3, 0);
+		
+		//->$4
+		CFDictionarySetValue(returnOptions, CFSTR("rawImageDisplayBundleID"), QLPreviewTypeGetRawImageDisplayBundleID());
+		CFDictionarySetValue(returnOptions, CFSTR("rawImageContentType"), QLPreviewTypeGetRawImageContentType());
+		CFIndex displayBundleCount = QLPreviewTypeGetDisplayBundleCount();
+		CFTypeRef intValue = CFNumberCreate (NULL, kCFNumberIntType, &displayBundleCount);
+		CFDictionarySetValue(returnOptions, CFSTR("displayBundleCount"), intValue);
+		CFRelease(intValue);
+		
+        PA_Unistring *param4 = PA_GetStringParameter(params, 4);
+        
+		setOptions(param4, returnOptions);
+		CFRelease(returnOptions);
+	}
 }
