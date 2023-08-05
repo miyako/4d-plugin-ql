@@ -2,6 +2,7 @@
 ![platform](https://img.shields.io/static/v1?label=platform&message=mac-intel%20|%20mac-arm&color=blue)
 [![license](https://img.shields.io/github/license/miyako/4d-plugin-ql)](LICENSE)
 ![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-ql/total)
+![deprecated](https://img.shields.io/badge/-deprecated-inactive)
 
 # 4d-plugin-ql
 Use [QuickLook](https://developer.apple.com/documentation/quicklook) API to generate thumbnails and previews.
